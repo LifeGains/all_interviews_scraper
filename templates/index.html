@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All {{ person_name }} Interviews</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 bg-light p-4">
+                <h3>Filter by Views</h3>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="viewFilter" id="view-any" value="any" checked>
+                    <label class="form-check-label" for="view-any">
+                        Any
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="viewFilter" id="view500k-1m" value="500k-1m">
+                    <label class="form-check-label" for="view500k-1m">
+                        500K - 1M
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="viewFilter" id="view1m-plus" value="1m-plus">
+                    <label class="form-check-label" for="view1m-plus">
+                        1M+
+                    </label>
+                </div>
+
+                <h3 class="mt-4">Filter by Duration</h3>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="durationFilter" id="duration-any" value="any" checked>
+                    <label class="form-check-label" for="duration-any">
+                        Any
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="durationFilter" id="duration-lt10" value="lt10">
+                    <label class="form-check-label" for="duration-lt10">
+                        < 10 mins
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="durationFilter" id="duration-10-30" value="10-30">
+                    <label class="form-check-label" for="duration-10-30">
+                        10 - 30 mins
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="durationFilter" id="duration-30-60" value="30-60">
+                    <label class="form-check-label" for="duration-30-60">
+                        30 - 60 mins
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="durationFilter" id="duration-gt60" value="gt60">
+                    <label class="form-check-label" for="duration-gt60">
+                        1+ hours
+                    </label>
+                </div>
+
+                <h3 class="mt-4">Filter by Probability</h3>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="probabilityFilter" id="probability-any" value="any" checked>
+                    <label class="form-check-label" for="probability-any">
+                        Any value
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="probabilityFilter" id="probability-10-25" value="10-25">
+                    <label class="form-check-label" for="probability-10-25">
+                        10 - 25%
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="probabilityFilter" id="probability-25-50" value="25-50">
+                    <label class="form-check-label" for="probability-25-50">
+                        25 - 50%
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="probabilityFilter" id="probability-50-75" value="50-75">
+                    <label class="form-check-label" for="probability-50-75">
+                        50 - 75%
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="probabilityFilter" id="probability-75-plus" value="75-plus">
+                    <label class="form-check-label" for="probability-75-plus">
+                        75%+
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="container mt-4">
+                    <h1>All {{ person_name }} Interviews</h1>
+                    <div class="row" id="video-container">
+                        {% for item in items %}
+                        <div class="col-md-4 mb-4 video-item" data-views="{{ item.ViewCount }}" data-duration="{{ item.Duration }}" data-probability="{{ item.Probability }}">
+                            <div class="card">
+                                <img src="{{ item.Thumbnails }}" class="card-img-top" alt="{{ item.Title }}">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ item.Title }}</h5>
+                                    <p class="card-text">{{ item.Description }}</p>
+                                    <a href="{{ item.URL }}" class="btn btn-primary">Watch Video</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalVideoItems = null;
+
+        document.querySelectorAll('input[name="viewFilter"], input[name="durationFilter"], input[name="probabilityFilter"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                filterVideos();
+            });
+        });
+
+        function filterVideos() {
+            const viewFilter = document.querySelector('input[name="viewFilter"]:checked').value;
+            const durationFilter = document.querySelector('input[name="durationFilter"]:checked').value;
+            const probabilityFilter = document.querySelector('input[name="probabilityFilter"]:checked').value;
+            const videoItems = document.querySelectorAll('.video-item');
+
+            // If originalVideoItems is null, store the original video items
+            if (!originalVideoItems) {
+                originalVideoItems = Array.from(videoItems);
+            }
+
+            let hasMatchingItems = false;
+
+            originalVideoItems.forEach(function(item) {
+                const views = parseInt(item.dataset.views);
+                const duration = parseInt(item.dataset.duration);
+                const probability = parseFloat(item.dataset.probability);
+                let shouldShow = true;
+
+                if (viewFilter !== 'any' && viewFilter === '500k-1m' && (views < 500000 || views >= 1000000)) {
+                    shouldShow = false;
+                } else if (viewFilter !== 'any' && viewFilter === '1m-plus' && views < 1000000) {
+                    shouldShow = false;
+                }
+
+                if (durationFilter !== 'any' && duration < 10 && durationFilter === 'lt10') {
+                    shouldShow = false;
+                } else if (durationFilter !== 'any' && (duration < 10 || duration >= 30) && durationFilter === '10-30') {
+                    shouldShow = false;
+                } else if (durationFilter !== 'any' && (duration < 30 || duration >= 60) && durationFilter === '30-60') {
+                    shouldShow = false;
+                } else if (durationFilter !== 'any' && duration < 60 && durationFilter === 'gt60') {
+                    shouldShow = false;
+                }
+
+                if (probabilityFilter !== 'any' && probability >= 0.1 && probability < 0.25 && probabilityFilter === '10-25') {
+                    shouldShow = false;
+                } else if (probabilityFilter !== 'any' && (probability < 0.1 || probability >= 0.5) && probabilityFilter === '25-50') {
+                    shouldShow = false;
+                } else if (probabilityFilter !== 'any' && (probability < 0.25 || probability >= 0.75) && probabilityFilter === '50-75') {
+                    shouldShow = false;
+                } else if (probabilityFilter !== 'any' && probability < 0.75 && probabilityFilter === '75-plus') {
+                    shouldShow = false;
+                }
+
+                if (shouldShow) {
+                    item.style.display = 'block';
+                    hasMatchingItems = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // If there are no matching items, display a message
+            const videoContainer = document.getElementById('video-container');
+            if (!hasMatchingItems && (viewFilter !== 'any' || durationFilter !== 'any' || probabilityFilter !== 'any')) {
+                videoContainer.innerHTML = '<div class="text-center">No videos match the selected filters.</div>';
+            } else {
+                videoContainer.innerHTML = '';
+                // Append the visible video items back to the container
+                originalVideoItems.forEach(function(item) {
+                    videoContainer.appendChild(item);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
