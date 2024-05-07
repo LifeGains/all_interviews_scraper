@@ -13,7 +13,6 @@ import numpy as np
 from pandas import json_normalize
 import requests
 import json
-from streamlit_js_eval import get_geolocation
 from geopy.geocoders import Nominatim
 import inspect
 from geopy.distance import geodesic
