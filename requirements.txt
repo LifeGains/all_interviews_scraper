@@ -5,7 +5,6 @@ googlemaps==4.10.0
 isodate==0.6.1
 numpy==1.26.4
 pandas==2.2.2
-Pillow==10.0.1
 Pillow==10.3.0
 ppprint==0.1.0
 pyairtable==2.3.3
