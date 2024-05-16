@@ -101,10 +101,12 @@
                         {% for item in items %}
                         <div class="col-md-4 mb-4 video-item" data-views="{{ item.ViewCount }}" data-duration="{{ item.Duration }}" data-probability="{{ item.Probability }}">
                             <div class="card">
-                                <img src="{{ item.Thumbnails }}" class="card-img-top" alt="{{ item.Title }}">
+                                <a href="{{ item.URL }}">
+                                    <img src="{{ item.Thumbnails }}" class="card-img-top" alt="{{ item.Title }}">
+                                </a>
                                 <div class="card-body">
                                     <h5 class="card-title">{{ item.Title }}</h5>
-                                    <p class="card-text">{{ item.Description }}</p>
+                                    <p class="card-text">{{ "{:.1f}".format(item.Duration) }} minutes</p>
                                     <a href="{{ item.URL }}" class="btn btn-primary">Watch Video</a>
                                 </div>
                             </div>

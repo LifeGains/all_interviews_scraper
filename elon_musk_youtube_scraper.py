@@ -10,7 +10,8 @@ from PIL import Image
 import torch
 from torchvision.models import resnet50
 from torchvision.transforms import Resize, Normalize, Compose, ToTensor
-
+from googleapiclient.discovery import build
+import re
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.float_format', lambda x: '%.2f' % x)
@@ -155,6 +156,10 @@ def import_to_airtable(df, base_id, table_id):
     table = api.table(base_id, table_id)
     print(table)
 
+    # Read existing records from Airtable into a DataFrame
+    all_records = table.all()
+    existing_records = pd.DataFrame([record['fields'] for record in all_records])
+    
     # Convert DataFrame to a list of dictionaries
     records = df.to_dict('records')
 
@@ -164,49 +169,53 @@ def import_to_airtable(df, base_id, table_id):
     # Check each record if it exists in Airtable
     for record in records:
         video_id = record['VideoID']
-        # Query Airtable to find if this record already exists
-        match_string = f"{{VideoID}} = '{video_id}'"
-        existing_records = table.first(formula=match_string)
-        if not existing_records:
-            new_records.append(record)
-
+        # Check if the VideoID already exists in the existing records
+        if not existing_records[existing_records['VideoID'] == video_id].empty:
+            continue  # Skip this record if it already exists
+        new_records.append(record)
+    
     # Use batch_create to import records
     # Airtable API limits batch operations to 10 records at a time
     for i in range(0, len(records), 10):
         batch = records[i:i + 10]
         table.batch_create(batch)
 
-def predict_proba(df, person_name):
-    # Load the pre-trained ResNet50 model
-    model = resnet50(pretrained=True)
-    model.eval()
+    return
 
-    # Define the image preprocessing pipeline
-    transform = Compose([
-        Resize((224, 224)),
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+def get_verified_interviews(base_id, table_id, person_name):
+    table = api.table(base_id, table_id)
+    all_records = table.all()
+    df = pd.DataFrame([record['fields'] for record in all_records])
 
-    probs = []
-    for thumbnail_url in df['Thumbnails']:
-        # Download the thumbnail image
-        response = requests.get(thumbnail_url)
-        image = Image.open(BytesIO(response.content))
+    # Filter the DataFrame based on the specified conditions
+    filtered_df = df[(df['is_verified_interview'] == True) & (df['Query'] == person_name)]
 
-        # Preprocess the image
-        image_tensor = transform(image).unsqueeze(0)
+    return filtered_df
 
-        # Use the pre-trained model to predict the person in the image
-        with torch.no_grad():
-            output = model(image_tensor)
-            probabilities = torch.softmax(output, dim=1)
-            person_prob = probabilities[0][0].item()  # Assuming the person is the first class
-
-        # Assign the probability based on the model's prediction
-        probs.append(person_prob)
-
-    return probs
+def assign_classification(df, person_name):
+    for index, row in df.iterrows():
+        video_id = row['URL'].split('=')[-1]  # Extract the video ID from the YouTube URL
+        
+        # Use the existing youtube object
+        video_response = youtube.videos().list(
+            part='snippet',
+            id=video_id
+        ).execute()
+        
+        if 'items' in video_response and len(video_response['items']) > 0:
+            snippet = video_response['items'][0]['snippet']
+            video_title = snippet.get('title', '')
+            video_description = snippet.get('description', '')
+            
+            # Check if the person in question is mentioned in the video title or description
+            if person_name.lower() in video_title.lower() or person_name.lower() in video_description.lower():
+                df.at[index, 'predicted_classification'] = 1
+            else:
+                df.at[index, 'predicted_classification'] = 0
+        else:
+            df.at[index, 'predicted_classification'] = 0
+    
+    return df
 
 # This will only run if I run this as a standalone .py. 
 # Aka this will NOT run if I run this file from app.py.
@@ -216,9 +225,10 @@ if __name__ == "__main__":
     # Get 200 long youtube videos
     df = search_videos_advanced(person_name, 200, 50, 'long')
     # Add probability column
-    df['probabilities'] = predict_proba(df, person_name)
+    # df['probabilities'] = predict_proba(df, person_name)
     print(df[:10])
 
+    print(assign_classification(df, 'Elon Musk')[:10])
     # Import into Airtable
     base_id = 'appFghYaLZCWgV7o5'
     table_id = 'tblrTXm6mQ6zagGdg'
@@ -227,11 +237,11 @@ if __name__ == "__main__":
     # import_to_airtable(df, base_id, table_id)
     
     # Export to csv
-    df.to_csv(f'{person_name}.csv', index=False)
-    # Export to json
-    json_result = df.to_json(orient='records', indent=4)
-    with open(f'{person_name}.json', 'w') as f:
-        f.write(json_result)
+    # df.to_csv(f'{person_name}.csv', index=False)
+    # # Export to json
+    # json_result = df.to_json(orient='records', indent=4)
+    # with open(f'{person_name}.json', 'w') as f:
+    #     f.write(json_result)
 
 # To dos
 # - Repeat for other videos repos
